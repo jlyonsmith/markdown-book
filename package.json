@@ -1,0 +1,60 @@
+{
+  "name": "@johnls/markdown-book",
+  "version": "1.1.4",
+  "description": "A tool for collating Markdown books, whitepapers and essays",
+  "bin": {
+    "markdown-book": "dist/markdown-book.js"
+  },
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "rm -rf dist/ && babel src -d dist -s --ignore *.test.js",
+    "start": "babel-node --no-warnings -- src/markdown-book.js",
+    "start:debug": "babel-node --inspect-brk -- src/markdown-book.js",
+    "test": "jest --coverage --",
+    "test:debug": "babel-node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand",
+    "deploy": "npm publish --access public"
+  },
+  "jest": {
+    "automock": false,
+    "testPathIgnorePatterns": [
+      "node_modules/",
+      "scratch/",
+      "dist/"
+    ]
+  },
+  "keywords": [
+    "file",
+    "monitor"
+  ],
+  "author": "John Lyon-Smith",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlyonsmith/markdown-book.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jlyonsmith/markdown-book/issues"
+  },
+  "homepage": "https://github.com/jlyonsmith/markdown-book#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.5.5",
+    "@babel/core": "^7.5.5",
+    "@babel/node": "^7.5.5",
+    "@babel/plugin-proposal-class-properties": "^7.5.5",
+    "@babel/plugin-proposal-decorators": "^7.4.4",
+    "@babel/plugin-proposal-optional-chaining": "^7.2.0",
+    "@babel/plugin-syntax-object-rest-spread": "^7.2.0",
+    "@babel/preset-env": "^7.5.5",
+    "jest-cli": "^24.8.0"
+  },
+  "dependencies": {
+    "@johnls/json5": "^2.3.0",
+    "autobind-decorator": "^2.4.0",
+    "chalk": "^2.4.2",
+    "fs-extra": "^8.1.0",
+    "minimist": "^1.2.0",
+    "tempy": "^0.3.0"
+  }
+}

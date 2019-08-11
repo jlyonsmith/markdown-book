@@ -1,0 +1,5 @@
+{
+  toc: true,
+  numbering: "1.1.1",
+  files: ["./part1.md", "./part2.md", "./part3.md"],
+}
