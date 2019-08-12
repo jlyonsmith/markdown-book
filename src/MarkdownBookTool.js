@@ -62,28 +62,62 @@ Options:
     }
 
     this.log.info(`Processing ${bookPath}`)
-    const content = JSON5.parse(await fs.readFile(bookPath))
+    const { files, title, number } = JSON5.parse(await fs.readFile(bookPath))
 
-    if (!content.files || !Array.isArray(content.files)) {
+    if (!files || !Array.isArray(files)) {
       throw new Error("No files array property specified")
     }
 
     const tmpPath = tempy.file({ extension: "md" })
     const bookDir = path.resolve(path.dirname(bookPath))
 
-    for (let filePath of content.files) {
+    fs.writeFile(tmpPath, `# ${title || "Unknown"}\n\n`)
+
+    let numbering = []
+    const createSectionNumber = (depth, numbering) => {
+      let s = ""
+
+      if (depth === numbering.length + 1) {
+        numbering.push(1)
+      } else if (depth === numbering.length) {
+        numbering[depth - 1] += 1
+      } else if (depth === numbering.length - 1) {
+        numbering.pop()
+        numbering[numbering.length - 1] += 1
+      } else {
+        return "#".repeat(depth + 1) + "?.?.?: "
+      }
+
+      for (let i = 1; i <= numbering.length; i++) {
+        s += numbering[i - 1] + (i !== numbering.length ? "." : "")
+      }
+
+      return "#".repeat(depth + 1) + " " + s + ": "
+    }
+
+    for (let filePath of files) {
       if (!path.isAbsolute(filePath)) {
         filePath = path.resolve(bookDir, filePath)
       }
 
-      const markdown = await fs.readFile(filePath)
+      let markdown = await fs.readFile(filePath, { encoding: "utf8" })
 
-      // TODO: Re-write the headers
+      // Re-write the headings
+      markdown = markdown.replace(/^(#+) /gm, (match, p1) => {
+        const depth = p1.length
+
+        return "#" + p1 + numbering
+          ? createSectionNumber(depth, numbering)
+          : " "
+      })
+
+      // Insert a title and ensure file ends with a blank line
+      markdown += "\n"
 
       fs.appendFile(tmpPath, markdown)
     }
 
-    fs.move(tmpPath, outputPath)
+    fs.move(tmpPath, outputPath, { overwrite: true })
 
     return 0
   }

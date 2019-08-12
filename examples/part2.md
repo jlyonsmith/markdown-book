@@ -2,10 +2,10 @@
 
 The second part.
 
-## Section 1
+## Part 2 Section 1
 
 Blah
 
-## Section 2
+## Part 2 Section 2
 
 Blah

@@ -2,10 +2,10 @@
 
 The first part.
 
-## Story 1
+## Part 1 Section 1
 
 Blah
 
-## Story 2
+## Part 1 Section 2
 
 Blah
