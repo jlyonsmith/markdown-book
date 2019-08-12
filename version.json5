@@ -11,10 +11,10 @@
     minor: 0,
     patch: 0,
     build: 20190811,
-    revision: 0,
+    revision: 1,
     tz: "America/Los_Angeles",
     startYear: "2017",
-    sequence: 4
+    sequence: 5
   },
   fileTypes: [
     {
