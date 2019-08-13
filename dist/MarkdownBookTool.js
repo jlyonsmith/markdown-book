@@ -35,10 +35,9 @@ let MarkdownBookTool = (0, _autobindDecorator.default)(_class = class MarkdownBo
   async run(argv) {
     const options = {
       boolean: ["help", "version"],
-      string: ["output", "pdf"],
+      string: ["output"],
       alias: {
-        o: "output",
-        p: "pdf"
+        o: "output"
       }
     };
     const args = (0, _minimist.default)(argv, options);
@@ -60,8 +59,8 @@ Markdown files in the book in order.
 Options:
   --help                        Shows this help.
   --version                     Shows the tool version.
-  --output <file>, -o <file>    Markdown output file. Required.
-  --pdf <file>, -p <file>       Generate a PDF as the output.
+  --output <file>, -o <file>    Markdown output file. Default is definition
+                                file name with .md extension.
 `);
       return 0;
     }
@@ -72,13 +71,11 @@ Options:
       throw new Error("A book definition file must be specified");
     }
 
-    const outputPath = args["output"];
+    let outputPath = args["output"];
 
     if (!outputPath) {
-      throw new Error("An output path must be specified");
+      outputPath = _path.default.join(_path.default.dirname(bookPath), _path.default.basename(bookPath, _path.default.extname(bookPath), ".md"));
     }
-
-    this.log.info(`Processing ${bookPath}`);
 
     const {
       files,
@@ -111,14 +108,14 @@ Options:
         numbering.pop();
         numbering[numbering.length - 1] += 1;
       } else {
-        return "#".repeat(depth + 1) + "?.?.?: ";
+        return "#".repeat(depth + 1) + " ?.?.?. ";
       }
 
       for (let i = 1; i <= numbering.length; i++) {
-        s += numbering[i - 1] + (i !== numbering.length ? "." : "");
+        s += numbering[i - 1] + ".";
       }
 
-      return "#".repeat(depth + 1) + " " + s + ": ";
+      return "#".repeat(depth + 1) + " " + s + " ";
     };
 
     for (let filePath of files) {
@@ -132,18 +129,21 @@ Options:
 
       markdown = markdown.replace(/^(#+) /gm, (match, p1) => {
         const depth = p1.length;
-        return "#" + p1 + numbering ? createSectionNumber(depth, numbering) : " ";
-      }); // Insert a title and ensure file ends with a blank line
+        return "#" + p1 + number ? createSectionNumber(depth, numbering) : " ";
+      }); // Ensure file ends with a blank line
 
       markdown += "\n";
 
       _fsExtra.default.appendFile(tmpPath, markdown);
+
+      this.log.info(`Appended ${_path.default.basename(filePath)}`);
     }
 
     _fsExtra.default.move(tmpPath, outputPath, {
       overwrite: true
     });
 
+    this.log.info(`Output file is ${outputPath}`);
     return 0;
   }
 

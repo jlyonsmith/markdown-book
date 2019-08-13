@@ -17,10 +17,9 @@ export class MarkdownBookTool {
   async run(argv) {
     const options = {
       boolean: ["help", "version"],
-      string: ["output", "pdf"],
+      string: ["output"],
       alias: {
         o: "output",
-        p: "pdf",
       },
     }
 
@@ -43,8 +42,8 @@ Markdown files in the book in order.
 Options:
   --help                        Shows this help.
   --version                     Shows the tool version.
-  --output <file>, -o <file>    Markdown output file. Required.
-  --pdf <file>, -p <file>       Generate a PDF as the output.
+  --output <file>, -o <file>    Markdown output file. Default is definition
+                                file name with .md extension.
 `)
       return 0
     }
@@ -55,14 +54,19 @@ Options:
       throw new Error("A book definition file must be specified")
     }
 
-    const outputPath = args["output"]
+    let outputPath = args["output"]
 
     if (!outputPath) {
-      throw new Error("An output path must be specified")
+      outputPath =
+        path.join(
+          path.dirname(bookPath),
+          path.basename(bookPath, path.extname(bookPath))
+        ) + ".md"
     }
 
-    this.log.info(`Processing ${bookPath}`)
-    const { files, title, number } = JSON5.parse(await fs.readFile(bookPath))
+    const { files, title = "Unknown", number } = JSON5.parse(
+      await fs.readFile(bookPath)
+    )
 
     if (!files || !Array.isArray(files)) {
       throw new Error("No files array property specified")
@@ -71,7 +75,8 @@ Options:
     const tmpPath = tempy.file({ extension: "md" })
     const bookDir = path.resolve(path.dirname(bookPath))
 
-    fs.writeFile(tmpPath, `# ${title || "Unknown"}\n\n`)
+    fs.writeFile(tmpPath, `# ${title}\n\n`)
+    this.log.info(`Book title is '${title}'`)
 
     let numbering = []
     const createSectionNumber = (depth, numbering) => {
@@ -85,14 +90,14 @@ Options:
         numbering.pop()
         numbering[numbering.length - 1] += 1
       } else {
-        return "#".repeat(depth + 1) + "?.?.?: "
+        return "#".repeat(depth + 1) + " ?.?.?. "
       }
 
       for (let i = 1; i <= numbering.length; i++) {
-        s += numbering[i - 1] + (i !== numbering.length ? "." : "")
+        s += numbering[i - 1] + "."
       }
 
-      return "#".repeat(depth + 1) + " " + s + ": "
+      return "#".repeat(depth + 1) + " " + s + " "
     }
 
     for (let filePath of files) {
@@ -106,18 +111,18 @@ Options:
       markdown = markdown.replace(/^(#+) /gm, (match, p1) => {
         const depth = p1.length
 
-        return "#" + p1 + numbering
-          ? createSectionNumber(depth, numbering)
-          : " "
+        return "#" + p1 + number ? createSectionNumber(depth, numbering) : " "
       })
 
-      // Insert a title and ensure file ends with a blank line
+      // Ensure file ends with a blank line
       markdown += "\n"
 
       fs.appendFile(tmpPath, markdown)
+      this.log.info(`Appended ${path.basename(filePath)}`)
     }
 
     fs.move(tmpPath, outputPath, { overwrite: true })
+    this.log.info(`Output file is ${outputPath}`)
 
     return 0
   }
