@@ -74,12 +74,12 @@ Options:
     let outputPath = args["output"];
 
     if (!outputPath) {
-      outputPath = _path.default.join(_path.default.dirname(bookPath), _path.default.basename(bookPath, _path.default.extname(bookPath), ".md"));
+      outputPath = _path.default.join(_path.default.dirname(bookPath), _path.default.basename(bookPath, _path.default.extname(bookPath))) + ".md";
     }
 
     const {
       files,
-      title,
+      title = "Unknown",
       number
     } = _json.default.parse((await _fsExtra.default.readFile(bookPath)));
 
@@ -93,8 +93,9 @@ Options:
 
     const bookDir = _path.default.resolve(_path.default.dirname(bookPath));
 
-    _fsExtra.default.writeFile(tmpPath, `# ${title || "Unknown"}\n\n`);
+    _fsExtra.default.writeFile(tmpPath, `# ${title}\n\n`);
 
+    this.log.info(`Book title is '${title}'`);
     let numbering = [];
 
     const createSectionNumber = (depth, numbering) => {
