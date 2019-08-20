@@ -105,6 +105,8 @@ Options:
         filePath = path.resolve(bookDir, filePath)
       }
 
+      const fileDir = path.dirname(filePath)
+
       this.log.info(`Appending ${path.basename(filePath)}`)
 
       let markdown = await fs.readFile(filePath, { encoding: "utf8" })
@@ -117,6 +119,17 @@ Options:
           " " +
           (number ? createSectionNumber(p1.length, numbering) : "") +
           " "
+        )
+      })
+
+      // Re-write relative image links
+      markdown = markdown.replace(/!\[(.+)\]\((.+)\)/gm, (match, p1, p2) => {
+        return (
+          "![" +
+          p1 +
+          "](" +
+          path.relative(bookDir, path.resolve(fileDir, p2)) +
+          ")"
         )
       })
 
