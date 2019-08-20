@@ -78,26 +78,26 @@ Options:
     fs.writeFile(tmpPath, `# ${title}\n\n`)
     this.log.info(`Book title is '${title}'`)
 
-    let numbering = []
+    let numbering = [0]
     const createSectionNumber = (depth, numbering) => {
-      let s = ""
+      let section = ""
 
-      if (depth === numbering.length + 1) {
-        numbering.push(1)
-      } else if (depth === numbering.length) {
-        numbering[depth - 1] += 1
-      } else if (depth === numbering.length - 1) {
-        numbering.pop()
-        numbering[numbering.length - 1] += 1
-      } else {
-        return "#".repeat(depth + 1) + " ?.?.?. "
+      while (true) {
+        if (depth > numbering.length) {
+          numbering.push(0)
+        } else if (depth === numbering.length) {
+          numbering[numbering.length - 1] += 1
+          break
+        } else if (depth < numbering.length) {
+          numbering.pop()
+        }
       }
 
-      for (let i = 1; i <= numbering.length; i++) {
-        s += numbering[i - 1] + "."
+      for (let i = 0; i < numbering.length; i++) {
+        section += numbering[i] + "."
       }
 
-      return "#".repeat(depth + 1) + " " + s + " "
+      return section
     }
 
     for (let filePath of files) {
@@ -105,20 +105,25 @@ Options:
         filePath = path.resolve(bookDir, filePath)
       }
 
+      this.log.info(`Appending ${path.basename(filePath)}`)
+
       let markdown = await fs.readFile(filePath, { encoding: "utf8" })
 
       // Re-write the headings
       markdown = markdown.replace(/^(#+) /gm, (match, p1) => {
-        const depth = p1.length
-
-        return "#" + p1 + number ? createSectionNumber(depth, numbering) : " "
+        return (
+          "#" +
+          p1 +
+          " " +
+          (number ? createSectionNumber(p1.length, numbering) : "") +
+          " "
+        )
       })
 
       // Ensure file ends with a blank line
       markdown += "\n"
 
       fs.appendFile(tmpPath, markdown)
-      this.log.info(`Appended ${path.basename(filePath)}`)
     }
 
     fs.move(tmpPath, outputPath, { overwrite: true })
