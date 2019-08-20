@@ -25,6 +25,22 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+const pipeToPromise = (readable, writeable) => {
+  const promise = new Promise((resolve, reject) => {
+    readable.on("error", error => {
+      reject(error);
+    });
+    writeable.on("error", error => {
+      reject(error);
+    });
+    writeable.on("finish", file => {
+      resolve(file);
+    });
+  });
+  readable.pipe(writeable);
+  return promise;
+};
+
 let MarkdownBookTool = (0, _autobindDecorator.default)(_class = class MarkdownBookTool {
   constructor(container) {
     this.toolName = container.toolName;
@@ -34,13 +50,14 @@ let MarkdownBookTool = (0, _autobindDecorator.default)(_class = class MarkdownBo
 
   async run(argv) {
     const options = {
-      boolean: ["help", "version"],
+      boolean: ["debug", "help", "version"],
       string: ["output"],
       alias: {
         o: "output"
       }
     };
     const args = (0, _minimist.default)(argv, options);
+    this.debug = !!args.debug;
 
     if (args.version) {
       this.log.info(version.fullVersion);
@@ -80,22 +97,27 @@ Options:
     const {
       files,
       title = "Unknown",
-      number
+      number,
+      toc
     } = _json.default.parse((await _fsExtra.default.readFile(bookPath)));
 
     if (!files || !Array.isArray(files)) {
       throw new Error("No files array property specified");
     }
 
-    const tmpPath = _tempy.default.file({
+    const sectionsTmpPath = _tempy.default.file({
+      extension: "md"
+    });
+
+    const bookTmpPath = _tempy.default.file({
       extension: "md"
     });
 
     const bookDir = _path.default.resolve(_path.default.dirname(bookPath));
 
-    _fsExtra.default.writeFile(tmpPath, `# ${title}\n\n`);
-
     this.log.info(`Book title is '${title}'`);
+    await _fsExtra.default.writeFile(bookTmpPath, `# ${title}\n\n`);
+    let tableOfContents = "";
     let numbering = [0];
 
     const createSectionNumber = (depth, numbering) => {
@@ -124,24 +146,45 @@ Options:
         filePath = _path.default.resolve(bookDir, filePath);
       }
 
+      const fileDir = _path.default.dirname(filePath);
+
       this.log.info(`Appending ${_path.default.basename(filePath)}`);
       let markdown = await _fsExtra.default.readFile(filePath, {
         encoding: "utf8"
       }); // Re-write the headings
 
-      markdown = markdown.replace(/^(#+) /gm, (match, p1) => {
-        return "#" + p1 + " " + (number ? createSectionNumber(p1.length, numbering) : "") + " ";
+      markdown = markdown.replace(/^(#+) (.*)$/gm, (match, p1, p2) => {
+        const section = createSectionNumber(p1.length, numbering);
+
+        if (toc) {
+          const title = (number ? section + " " : "") + p2;
+          const link = title.toLowerCase().replace(/\./g, "").replace(/ /g, "-");
+          tableOfContents += "&nbsp;".repeat((numbering.length - 1) * 2) + "[" + title + "](#" + link + ")  \n";
+        }
+
+        return "#" + p1 + " " + (number ? section : "") + " " + p2;
+      }); // Re-write relative image links
+
+      markdown = markdown.replace(/!\[(.+)\]\((.+)\)/gm, (match, p1, p2) => {
+        return "![" + p1 + "](" + _path.default.relative(bookDir, _path.default.resolve(fileDir, p2)) + ")";
       }); // Ensure file ends with a blank line
 
       markdown += "\n";
-
-      _fsExtra.default.appendFile(tmpPath, markdown);
+      await _fsExtra.default.appendFile(sectionsTmpPath, markdown);
     }
 
-    _fsExtra.default.move(tmpPath, outputPath, {
+    tableOfContents += "\n---\n\n";
+
+    if (toc) {
+      await _fsExtra.default.appendFile(bookTmpPath, tableOfContents);
+    }
+
+    await pipeToPromise(_fsExtra.default.createReadStream(sectionsTmpPath), _fsExtra.default.createWriteStream(bookTmpPath, {
+      flags: "a"
+    }));
+    await _fsExtra.default.move(bookTmpPath, outputPath, {
       overwrite: true
     });
-
     this.log.info(`Output file is ${outputPath}`);
     return 0;
   }
